@@ -1,0 +1,30 @@
+# LiveTalking env for H20 (Hopper sm_90) — matches upstream tested stack:
+# Ubuntu 24.04 / Python 3.12 / PyTorch 2.9.1 / CUDA 13.0
+FROM nvidia/cuda:13.0.1-cudnn-devel-ubuntu24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PIP_NO_CACHE_DIR=1
+ENV PYTHONUNBUFFERED=1
+
+# System deps: python 3.12 (24.04 default), media/audio libs for aiortc/opencv/soundfile, build tools
+RUN apt-get update && apt-get install -yq --no-install-recommends \
+      python3 python3-venv python3-dev \
+      ffmpeg libsndfile1 libgl1 libglib2.0-0 \
+      build-essential pkg-config git curl wget \
+ && rm -rf /var/lib/apt/lists/*
+
+# Isolated venv (24.04 is PEP-668 externally-managed)
+RUN python3 -m venv /opt/venv
+ENV PATH=/opt/venv/bin:$PATH
+RUN pip install --upgrade pip setuptools wheel
+
+# PyTorch (cu130) — pinned to upstream-tested versions
+RUN pip install torch==2.9.1 torchvision==0.24.1 torchaudio==2.9.1 \
+      --index-url https://download.pytorch.org/whl/cu130
+
+# LiveTalking deps (code is bind-mounted at runtime, only requirements needed here)
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
+WORKDIR /workspace
+CMD ["bash"]
