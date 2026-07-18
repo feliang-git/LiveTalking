@@ -3,6 +3,7 @@
 ###############################################################################
 
 import json
+import os
 import asyncio
 import random
 import copy
@@ -57,9 +58,13 @@ class RTCManager:
         avatar_session = session_manager.get_session(sessionid)
 
         # 创建 PeerConnection
-        ice_server = RTCIceServer(urls='stun:stun.freeswitch.org:3478')
+        # STUN server is configurable; LT_STUN_URL="" disables external STUN
+        # (recommended for LAN deployments or hosts that cannot reach public
+        # STUN — an unreachable STUN server degrades/breaks ICE gathering).
+        stun_url = os.environ.get('LT_STUN_URL', 'stun:stun.freeswitch.org:3478')
+        ice_servers = [RTCIceServer(urls=stun_url)] if stun_url else []
         pc = RTCPeerConnection(
-            configuration=RTCConfiguration(iceServers=[ice_server])
+            configuration=RTCConfiguration(iceServers=ice_servers)
         )
         self.pcs.add(pc)
 
@@ -82,8 +87,13 @@ class RTCManager:
         preferences = list(filter(lambda x: x.name == "H264", capabilities.codecs))
         preferences += list(filter(lambda x: x.name == "VP8", capabilities.codecs))
         preferences += list(filter(lambda x: x.name == "rtx", capabilities.codecs))
-        transceiver = pc.getTransceivers()[1]
-        transceiver.setCodecPreferences(preferences)
+        # Select the VIDEO transceiver by kind: index-based selection breaks
+        # when the client's offer orders m-lines differently (e.g. video first),
+        # applying video codec prefs to the audio transceiver and derailing
+        # negotiation for non-browser (aiortc) clients.
+        for transceiver in pc.getTransceivers():
+            if transceiver.kind == "video":
+                transceiver.setCodecPreferences(preferences)
 
         await pc.setRemoteDescription(offer)
 
