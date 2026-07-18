@@ -83,6 +83,10 @@ class BaseAvatar:
 
         self.batch_size = opt.batch_size
         self.res_frame_queue = Queue(self.batch_size*2)
+        # RMS silence gate threshold; 0 disables (LT_SILENCE_RMS env, e.g. 0.005)
+        self._silence_rms = float(os.environ.get('LT_SILENCE_RMS', '0'))
+        # previous generated mouth crop for causal EMA smoothing (see musetalk_avatar)
+        self._ema_prev = None
         self.render_event = Event()
 
         _tts_modules = {
@@ -341,10 +345,20 @@ class BaseAvatar:
                     is_all_silence = False               
                 audio_frames.append(audioframe)
 
+            # RMS silence gate: near-zero-energy TTS audio (pauses, synth noise)
+            # is treated as silence so the idle path is used and the mouth rests
+            # instead of twitching. Audio playback is unaffected.
+            if not is_all_silence and self._silence_rms > 0:
+                energy = float(np.sqrt(np.mean(np.concatenate(
+                    [np.asarray(af.data, dtype=np.float32) for af in audio_frames]) ** 2)))
+                if energy < self._silence_rms:
+                    is_all_silence = True
+
              # 检测状态变化
             current_speaking = not is_all_silence
 
             if is_all_silence: #全为静音数据，只需要取fullimg，不需要推理
+                self._ema_prev = None  # reset mouth EMA across idle gaps
                 for i in range(self.batch_size):
                     idx = mirror_index(length, index)
                     self.res_frame_queue.put((None, audio_frames[i*2:i*2+2], idx))

@@ -121,6 +121,8 @@ class MuseReal(BaseAvatar):
         # self.res_frame_queue = mp.Queue(self.batch_size*2)
 
         self.vae, self.unet, self.pe, self.timesteps, self.audio_processor = model
+        # EMA weight of the NEW frame; 1.0 disables (LT_EMA_ALPHA env, e.g. 0.7)
+        self._ema_alpha = float(os.environ.get('LT_EMA_ALPHA', '1'))
 
         self.frame_list_cycle,self.mask_list_cycle,self.coord_list_cycle,self.mask_coords_list_cycle, self.input_latent_list_cycle = avatar
 
@@ -153,6 +155,15 @@ class MuseReal(BaseAvatar):
         return pred
 
     def paste_back_frame(self,pred_frame,idx:int):
+        # Causal EMA smoothing of the generated 256x256 mouth crop: blends with
+        # the previous generated crop only (past frames -> zero added latency),
+        # damping frame-to-frame lip trembling. _ema_prev is reset by the idle
+        # path in BaseAvatar.inference so utterance starts stay crisp.
+        if self._ema_alpha < 1.0:
+            if self._ema_prev is not None:
+                pred_frame = (self._ema_alpha * pred_frame.astype(np.float32)
+                              + (1.0 - self._ema_alpha) * self._ema_prev)
+            self._ema_prev = pred_frame.astype(np.float32)
         bbox = self.coord_list_cycle[idx]
         ori_frame = copy.deepcopy(self.frame_list_cycle[idx])
         x1, y1, x2, y2 = bbox
