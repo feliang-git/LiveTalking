@@ -33,3 +33,9 @@ CMD ["bash"]
 RUN apt-get update && apt-get install -yq --no-install-recommends cmake \
  && rm -rf /var/lib/apt/lists/* \
  && pip install face_recognition
+
+# face_recognition model weights (packaged separately, pip-installable only from git)
+RUN pip install git+https://github.com/ageitgey/face_recognition_models
+
+# face_recognition_models uses legacy pkg_resources, removed in setuptools>=81
+RUN pip install "setuptools<81"
