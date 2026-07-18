@@ -28,3 +28,8 @@ RUN pip install -r /tmp/requirements.txt
 
 WORKDIR /workspace
 CMD ["bash"]
+
+# genavatar (avatar preprocessing) deps: face_recognition -> dlib, needs cmake to compile
+RUN apt-get update && apt-get install -yq --no-install-recommends cmake \
+ && rm -rf /var/lib/apt/lists/* \
+ && pip install face_recognition
