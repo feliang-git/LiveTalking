@@ -368,7 +368,12 @@ class BaseAvatar:
                     index = 0
                 t = time.perf_counter()
 
+                _t0 = time.perf_counter()
                 pred = self.inference_batch(index, audiofeat_batch)
+                if not getattr(self, '_first_real_batch_logged', False):
+                    self._first_real_batch_logged = True
+                    import numpy as _np
+                    logger.info(f'[timing] first real inference_batch: {time.perf_counter()-_t0:.3f}s shapes={[_np.asarray(a).shape for a in audiofeat_batch[:1]]} n={len(audiofeat_batch)} dtype={_np.asarray(audiofeat_batch[0]).dtype}')
 
                 counttime += (time.perf_counter() - t)
                 count += self.batch_size

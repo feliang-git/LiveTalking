@@ -96,17 +96,22 @@ def warm_up(batch_size,model):
     # 预热函数
     print('warmup model...')
     vae, unet, pe, timesteps, audio_processor = model
-    whisper_batch = np.ones((batch_size, 50, 384), dtype=np.uint8)
+    # float16 + identical construction to the real inference_batch path —
+    # a uint8 synthetic batch leaves the real fp16 path cold (first real
+    # utterance paid ~2.9s on H20 despite this warmup)
+    whisper_batch = np.stack([np.ones((50, 384), dtype=np.float16)] * batch_size)
     latent_batch = torch.ones(batch_size, 8, 32, 32).to(unet.device)
 
     audio_feature_batch = torch.from_numpy(whisper_batch)
     audio_feature_batch = audio_feature_batch.to(device=unet.device, dtype=unet.model.dtype)
     audio_feature_batch = pe(audio_feature_batch)
     latent_batch = latent_batch.to(dtype=unet.model.dtype)
-    pred_latents = unet.model(latent_batch,
-                              timesteps,
-                              encoder_hidden_states=audio_feature_batch).sample
-    vae.decode_latents(pred_latents)    
+    for _ in range(2):
+        pred_latents = unet.model(latent_batch,
+                                  timesteps,
+                                  encoder_hidden_states=audio_feature_batch).sample
+        vae.decode_latents(pred_latents)
+    torch.cuda.synchronize()    
 
 @register("avatar", "musetalk")
 class MuseReal(BaseAvatar):
@@ -142,16 +147,26 @@ class MuseReal(BaseAvatar):
             latent_batch.append(latent)
         latent_batch = torch.cat(latent_batch, dim=0)
         
+        import time as _time
+        _first = not getattr(self, '_ib_logged', False)
+        _t = _time.perf_counter()
         audio_feature_batch = torch.from_numpy(whisper_batch)
         audio_feature_batch = audio_feature_batch.to(device=self.unet.device,
                                                         dtype=self.unet.model.dtype)
         audio_feature_batch = self.pe(audio_feature_batch)
         latent_batch = latent_batch.to(dtype=self.unet.model.dtype)
+        if _first:
+            torch.cuda.synchronize(); _t_pe = _time.perf_counter()
 
         pred_latents = self.unet.model(latent_batch, 
                                     self.timesteps, 
                                     encoder_hidden_states=audio_feature_batch).sample
+        if _first:
+            torch.cuda.synchronize(); _t_unet = _time.perf_counter()
         pred = self.vae.decode_latents(pred_latents)
+        if _first:
+            self._ib_logged = True
+            logger.info(f'[timing] ib stages: pe+prep={_t_pe-_t:.3f}s unet={_t_unet-_t_pe:.3f}s vae={_time.perf_counter()-_t_unet:.3f}s')
         return pred
 
     def paste_back_frame(self,pred_frame,idx:int):

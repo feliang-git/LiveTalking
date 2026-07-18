@@ -118,6 +118,25 @@ async def download_record(request):
         return web.Response(status=404, text="Record not found")
 
 
+def _tts_prewarm(voice):
+    """Warm DNS/TLS to the edge-tts endpoint once per process (LT_TTS_PREWARM=1),
+    removing the ~3s cold-start penalty from the first real utterance."""
+    try:
+        import asyncio as _aio
+        import edge_tts as _et
+        async def _go():
+            async for _ in _et.Communicate("你好", voice).stream():
+                pass
+        _aio.new_event_loop().run_until_complete(_go())
+        # resampy JIT-compiles numba kernels on first use (~2-4s); warm it so
+        # the first real utterance doesn't pay the compile cost
+        import resampy as _resampy
+        _resampy.resample(np.zeros(24000, dtype=np.float32), 24000, 16000)
+        logger.info("TTS prewarm done")
+    except Exception:
+        logger.exception("TTS prewarm failed")
+
+
 def main():
     global rtc_manager, opt, model,load_avatar
     # 解析命令行参数
@@ -197,6 +216,8 @@ def main():
         pagename='rtmpapi.html'
     elif opt.transport=='rtcpush':
         pagename='rtcpushapi.html'
+    if os.environ.get('LT_TTS_PREWARM') == '1' and opt.tts == 'edgetts':
+        Thread(target=_tts_prewarm, args=(opt.REF_FILE or 'zh-CN-YunxiaNeural',), daemon=True).start()
     logger.info('start http server; http://<serverip>:'+str(opt.listenport)+'/'+pagename)
     # logger.info('如果使用webrtc，推荐访问webrtc集成前端: http://<serverip>:'+str(opt.listenport)+'/dashboard.html')
     def run_server(runner):

@@ -6,9 +6,9 @@ Details & raw numbers: bench/RESULTS.md. Video artifacts: bench/runs/*.mp4 (serv
 
 ## CURRENT BEST
 - branch/tag: `best` (git tag, moved when a config wins an A/B)
-- launch: `docker run ... -e LT_STUN_URL= -e LT_SILENCE_RMS=0.005 -e LT_EMA_ALPHA=0.7 ... python app.py --transport webrtc --model musetalk --avatar_id musetalk_rupert --batch_size 4`
-- status: batch 4 + silence gate + EMA mouth smoothing (A/B validated, latency-safe)
-- metrics: infer ~45 fps | delivered 25 fps | warm ttfa 1.63 s (baseline was 6.6 s)
+- launch: `docker run ... -e LT_STUN_URL= -e LT_SILENCE_RMS=0.005 -e LT_EMA_ALPHA=0.7 -e LT_TTS_PREWARM=1 -e LT_TTS_SENTENCE_SPLIT=1 ... python app.py --transport webrtc --model musetalk --avatar_id musetalk_rupert --batch_size 4` + `bench/boot_warm.sh` once after boot
+- status: FINAL (overnight campaign complete) — batch 4 + silence gate + EMA smoothing + TTS sentence-split + prewarm + boot self-warm
+- metrics: TTFA 1.33-1.42 s (from 6.6 s baseline, -80%) | 25 fps held | p95 frame interval 44 ms
 
 ## Timeline
 - [x] H20 docker env (torch 2.9.1+cu130) + MuseTalk v1.5 weights + 3 avatar bundles (rupert/jamie/jesse)
@@ -16,5 +16,6 @@ Details & raw numbers: bench/RESULTS.md. Video artifacts: bench/runs/*.mp4 (serv
 - [x] Baseline measured (see CURRENT BEST); 2 upstream bugs found & fixed (STUN config, codec-prefs-by-kind)
 - [x] batch_size sweep 16/8/4 -> winner batch 4 (warm ttfa 2.1->1.5 s)
 - [x] silence gate (RMS) + causal EMA mouth smoothing behind env flags, A/B -> both adopted
-- [ ] bbox_shift sweep for mouth alignment (visual)  <- variants built, recording next
-- [ ] TTS/time-to-first-audio reduction
+- [x] bbox_shift sweep -> all variants within noise, keep default 0 (videos+filmstrips saved)
+- [x] TTS sentence-split + prewarm + boot self-warm -> first utterance 4.7->1.33 s
+- [x] cross-person videos (jamie/jesse) under best config for morning review

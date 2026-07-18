@@ -20,6 +20,7 @@ import time
 import aiohttp
 import numpy as np
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCConfiguration
+from aiortc.contrib.media import MediaRecorder, MediaRelay
 
 RMS_THRESH = 0.01  # int16-normalized loudness gate for "audible"
 
@@ -71,10 +72,14 @@ async def run(args):
     pc.addTransceiver("audio", direction="recvonly")  # audio FIRST: server assumes transceiver[1] is video
     pc.addTransceiver("video", direction="recvonly")
     tasks = []
+    relay = MediaRelay()
+    recorder = MediaRecorder(args.record) if args.record else None
 
     @pc.on("track")
     def on_track(track):
-        tasks.append(asyncio.ensure_future(consume(track, meter)))
+        tasks.append(asyncio.ensure_future(consume(relay.subscribe(track), meter)))
+        if recorder:
+            recorder.addTrack(relay.subscribe(track))
 
     await pc.setLocalDescription(await pc.createOffer())
     async with aiohttp.ClientSession() as http:
@@ -86,6 +91,8 @@ async def run(args):
         await pc.setRemoteDescription(
             RTCSessionDescription(sdp=ans["sdp"], type=ans["type"]))
 
+        if recorder:
+            await recorder.start()
         # wait for first video frame (connection up)
         t0 = time.perf_counter()
         while meter.first_video_ts is None:
@@ -140,6 +147,8 @@ async def run(args):
             })
         print(json.dumps(result, ensure_ascii=False))
 
+    if recorder:
+        await recorder.stop()
     for t in tasks:
         t.cancel()
     await pc.close()
@@ -155,5 +164,6 @@ if __name__ == "__main__":
     ap.add_argument("--idle-secs", type=float, default=6)
     ap.add_argument("--speak-timeout", type=float, default=25)
     ap.add_argument("--measure-secs", type=float, default=25)
+    ap.add_argument("--record", default="", help="record received A/V to this mp4 path")
     args = ap.parse_args()
     asyncio.run(run(args))

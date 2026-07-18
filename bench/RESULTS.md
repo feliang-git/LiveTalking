@@ -50,3 +50,31 @@ Videos: bench/runs/batch{16,8,4}_rep{1,2}.mp4
 | both | 1.63 s | 44.9 ms | ~45 | ADOPTED as best |
 
 All variants hold 25 fps delivery. Videos: bench/runs/q_{ctrl,gate,ema,both}_rep{1,2}.mp4
+
+## Experiment 3 — bbox_shift (visual, 5 variants)
+
+Mouth-activity (mean abs frame diff, speech window): default 0.657, -7: 0.632,
+-4: 0.623, +4: 0.651, +7: 0.657 -> all within noise; no blending artifacts.
+KEEP default bbox_shift=0. Artifacts: bench/runs/bbox_*.mp4, strip_*.jpg (filmstrips).
+
+## Experiment 4 — TTS + first-utterance latency
+
+- Sentence split (LT_TTS_SENTENCE_SPLIT=1): first-piece synth 2.5s -> ~0.48s;
+  warm TTFA 1.63 -> 1.32-1.48s. ADOPTED.
+- Prewarm (LT_TTS_PREWARM=1): edge-tts DNS/TLS + resampy numba JIT (~0.8s). ADOPTED.
+- Cold-start investigation: remaining ~2.9s isolated via staged timing to the FIRST
+  REAL UNet forward per process (pe 3ms / unet 2865ms / vae 52ms). Synthetic warmup
+  (even exact fp16 shapes, thread-context variants) does NOT cover it — lazy init
+  tied to the real execution context. FIX: bench/boot_warm.sh drives one real
+  utterance through the full pipeline after boot. Validated: first user utterance
+  1.33s / 1.42s (2 reps), 25 fps, p95 44 ms.
+
+## Cross-person (identical best config)
+jamie / jesse recorded: bench/runs/person_musetalk_{jamie,jesse}.mp4 — both 25 fps stable.
+
+## FINAL BEST CONFIG
+docker run ... -e LT_STUN_URL= -e LT_SILENCE_RMS=0.005 -e LT_EMA_ALPHA=0.7 \
+  -e LT_TTS_PREWARM=1 -e LT_TTS_SENTENCE_SPLIT=1 ... \
+  python app.py --transport webrtc --model musetalk --avatar_id musetalk_rupert --batch_size 4
+# then once: bash bench/boot_warm.sh
+Warm TTFA ~1.35 s | first utterance after boot ~1.33 s | 25 fps | p95 44 ms
