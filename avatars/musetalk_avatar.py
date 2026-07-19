@@ -128,6 +128,12 @@ class MuseReal(BaseAvatar):
         self.vae, self.unet, self.pe, self.timesteps, self.audio_processor = model
         # EMA weight of the NEW frame; 1.0 disables (LT_EMA_ALPHA env, e.g. 0.7)
         self._ema_alpha = float(os.environ.get('LT_EMA_ALPHA', '1'))
+        # Deadband temporal filter threshold on 0-255 scale; 0 disables
+        # (LT_DEADBAND env, e.g. 6). Unlike EMA it does NOT damp real motion:
+        # sub-threshold pixel changes (VAE texture "boiling") are suppressed,
+        # large changes (actual lip movement) pass through unchanged.
+        self._deadband = float(os.environ.get('LT_DEADBAND', '0'))
+        self._db_prev = None
 
         self.frame_list_cycle,self.mask_list_cycle,self.coord_list_cycle,self.mask_coords_list_cycle, self.input_latent_list_cycle = avatar
 
@@ -179,6 +185,15 @@ class MuseReal(BaseAvatar):
                 pred_frame = (self._ema_alpha * pred_frame.astype(np.float32)
                               + (1.0 - self._ema_alpha) * self._ema_prev)
             self._ema_prev = pred_frame.astype(np.float32)
+        if self._deadband > 0:
+            cur = pred_frame.astype(np.float32)
+            if self._db_prev is not None and self._db_prev.shape == cur.shape:
+                delta = cur - self._db_prev
+                # soft knee: suppress changes below T, ramp to full pass by 2T
+                k = np.clip((np.abs(delta) - self._deadband) / self._deadband, 0.0, 1.0)
+                cur = self._db_prev + delta * k
+            self._db_prev = cur
+            pred_frame = cur
         bbox = self.coord_list_cycle[idx]
         ori_frame = copy.deepcopy(self.frame_list_cycle[idx])
         x1, y1, x2, y2 = bbox

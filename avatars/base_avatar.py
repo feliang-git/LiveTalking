@@ -359,6 +359,7 @@ class BaseAvatar:
 
             if is_all_silence: #全为静音数据，只需要取fullimg，不需要推理
                 self._ema_prev = None  # reset mouth EMA across idle gaps
+                self._db_prev = None   # reset deadband filter state too
                 for i in range(self.batch_size):
                     idx = mirror_index(length, index)
                     self.res_frame_queue.put((None, audio_frames[i*2:i*2+2], idx))
