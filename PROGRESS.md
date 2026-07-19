@@ -19,3 +19,11 @@ Details & raw numbers: bench/RESULTS.md. Video artifacts: bench/runs/*.mp4 (serv
 - [x] bbox_shift sweep -> all variants within noise, keep default 0 (videos+filmstrips saved)
 - [x] TTS sentence-split + prewarm + boot self-warm -> first utterance 4.7->1.33 s
 - [x] cross-person videos (jamie/jesse) under best config for morning review
+
+## Track B: SyncTalk_2D per-person model (Rupert) — trained
+- Why: MuseTalk mouth jitter is architectural (frame-independent); per-person training is the fix. SyncTalk++ code unreleased; SyncTalk_2D (same authors, 328x328, realtime-capable) chosen over NeRF SyncTalk (no CUDA-ext/BFM blockers).
+- Env: synctalk2d:h20 (torch 2.2.0+cu121). Repo at /raid/fei/workspaces/digital_human/SyncTalk_2D.
+- Fixes: dataset __len__ clamp (audio feats vs frames off-by-3); inference mux moved outside container (conda ffmpeg lacks libx264).
+- Trained: 100 epochs on H20 GPU 2 (~2h). Checkpoint: checkpoint/Rupert/99.pth.
+- Output: result/Rupert_intro_en.mp4; side-by-side vs MuseTalk: result/compare_musetalk_vs_synctalk2d.mp4 (identical audio).
+- Pending: user visual review -> if better, integrate into LiveTalking realtime (custom avatar module).
