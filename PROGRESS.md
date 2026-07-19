@@ -6,7 +6,7 @@ Details & raw numbers: bench/RESULTS.md. Video artifacts: bench/runs/*.mp4 (serv
 
 ## CURRENT BEST
 - branch/tag: `best` (git tag, moved when a config wins an A/B)
-- launch: `docker run ... -e LT_STUN_URL= -e LT_SILENCE_RMS=0.005 -e LT_EMA_ALPHA=0.7 -e LT_TTS_PREWARM=1 -e LT_TTS_SENTENCE_SPLIT=1 ... python app.py --transport webrtc --model musetalk --avatar_id musetalk_rupert --batch_size 4` + `bench/boot_warm.sh` once after boot
+- launch: `docker run ... -e LT_STUN_URL= -e LT_SILENCE_RMS=0.005 -e LT_EMA_ALPHA=0.7 -e LT_TTS_PREWARM=1 -e LT_TTS_SENTENCE_SPLIT=1 ... python app.py --transport webrtc --model musetalk --avatar_id musetalk_rupert --batch_size 4` + `bench/boot_warm.sh` once after boot; add `-e LT_VIDEO_BITRATE=6000000` for 1080p clarity
 - status: FINAL (overnight campaign complete) — batch 4 + silence gate + EMA smoothing + TTS sentence-split + prewarm + boot self-warm
 - metrics: TTFA 1.33-1.42 s (from 6.6 s baseline, -80%) | 25 fps held | p95 frame interval 44 ms
 

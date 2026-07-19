@@ -118,6 +118,18 @@ async def download_record(request):
         return web.Response(status=404, text="Record not found")
 
 
+# Video encoder bitrate override (LT_VIDEO_BITRATE, bps). aiortc's H264
+# defaults (1 Mbps default / 3 Mbps cap) visibly starve 1080p25 output;
+# 4-8 Mbps restores clarity. Unset = stock behavior.
+_vb = os.environ.get('LT_VIDEO_BITRATE')
+if _vb:
+    import aiortc.codecs.h264 as _h264
+    _vb = int(_vb)
+    _h264.DEFAULT_BITRATE = _vb
+    _h264.MIN_BITRATE = max(500_000, _vb // 2)
+    _h264.MAX_BITRATE = _vb * 2
+
+
 def _tts_prewarm(voice):
     """Warm DNS/TLS to the edge-tts endpoint once per process (LT_TTS_PREWARM=1),
     removing the ~3s cold-start penalty from the first real utterance."""
