@@ -27,3 +27,17 @@ Details & raw numbers: bench/RESULTS.md. Video artifacts: bench/runs/*.mp4 (serv
 - Trained: 100 epochs on H20 GPU 2 (~2h). Checkpoint: checkpoint/Rupert/99.pth.
 - Output: result/Rupert_intro_en.mp4; side-by-side vs MuseTalk: result/compare_musetalk_vs_synctalk2d.mp4 (identical audio).
 - Pending: user visual review -> if better, integrate into LiveTalking realtime (custom avatar module).
+
+## Track B round 2: SyncTalk_2D training-code bugs found & fixed, two arms retrained
+- v1 failure root causes (confirmed vs upstream issues UDH#196/#113/#90): SyncNet trained
+  with positives only (degenerate, loss->0 means nothing), missing zero_grad, cosine->BCE
+  range bug (2 places), audio-features/frames off-by-3 misalignment.
+- Fixes in our SyncTalk_2D clone: negative sampling (50%, |offset|>10) + zero_grad +
+  clamped (cos+1)/2 in both cosine_loss defs + feature tail trim to frames+1.
+- Arm A (no syncnet, upstream-recommended): trained 100ep. Silence-A/B gate: audio drives
+  mouth (diff 1.29 vs GT motion scale 1.77). -> synctalk2d_v2_intro_en.mp4
+- Arm B (fixed syncnet, lr 1e-4; best syncnet loss ~0.39): trained 100ep. Silence-A/B:
+  diff 1.80 — strongest audio response. -> synctalk2d_v2b_intro_en.mp4
+- Diagnostic lesson: frame-diff/audio-envelope correlation metric was invalid (box on neck,
+  and GT itself scores ~0.1); replaced with self-calibrating silent-audio A/B.
+- Pending: user visual review of armA vs armB vs MuseTalk.
