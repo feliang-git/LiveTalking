@@ -108,10 +108,12 @@ async def run(args):
 
         # submit utterance
         meter.submit_ts = time.perf_counter()
-        async with http.post(args.url + "/human", json={
-            "sessionid": sessionid, "type": "echo",
-            "text": args.text, "interrupt": True,
-        }) as resp:
+        human_req = {"sessionid": sessionid,
+                     "type": "chat" if args.chat else "echo",
+                     "text": args.text, "interrupt": True}
+        if args.tts_voice:
+            human_req["tts"] = {"ref_file": args.tts_voice}
+        async with http.post(args.url + "/human", json=human_req) as resp:
             r = await resp.json()
             assert r.get("code") == 0, f"/human failed: {r}"
 
@@ -165,5 +167,7 @@ if __name__ == "__main__":
     ap.add_argument("--speak-timeout", type=float, default=25)
     ap.add_argument("--measure-secs", type=float, default=25)
     ap.add_argument("--record", default="", help="record received A/V to this mp4 path")
+    ap.add_argument("--tts-voice", default="", help="edge-tts voice override, e.g. en-US-GuyNeural")
+    ap.add_argument("--chat", action="store_true", help="use chat mode (LLM+RAG) instead of echo")
     args = ap.parse_args()
     asyncio.run(run(args))
