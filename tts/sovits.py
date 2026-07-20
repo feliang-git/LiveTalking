@@ -1,3 +1,4 @@
+import os
 import time
 import numpy as np
 import resampy
@@ -16,12 +17,14 @@ class SovitsTTS(BaseTTS):
         text,textevent = msg
         ref_file = textevent.get('tts', {}).get('ref_file',self.opt.REF_FILE)
         ref_text = textevent.get('tts', {}).get('ref_text',self.opt.REF_TEXT)
+        # language was hardcoded "zh"; allow per-request override or env default
+        lang = textevent.get('tts', {}).get('lang', os.environ.get('LT_SOVITS_LANG', 'zh'))
         self.stream_tts(
             self.gpt_sovits(
                 text=text,
                 reffile=ref_file,
                 reftext=ref_text,
-                language="zh", #en args.language,
+                language=lang,
                 server_url=self.opt.TTS_SERVER, #"http://127.0.0.1:5000", #args.server_url,
             ),
             msg
