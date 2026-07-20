@@ -51,3 +51,16 @@ Details & raw numbers: bench/RESULTS.md. Video artifacts: bench/runs/*.mp4 (serv
 - May control experiment settled the SyncTalk_2D question: same pipeline on
   spec-compliant data works (audio-response 5.10 vs 1.29/1.80 on our short data)
   -> awaiting 5-min Rupert re-recording for the stable-mouth track.
+
+## Knowledge base: Josquin Research Project (www.josqu.in) — LIVE
+- Ingested from official GitHub repos (NOT crawled; work pages are JS shells):
+  jrp-scores (1387 kern scores w/ catalog metadata) + jrp-website (works/composers/
+  sources/editions JSON + about/under-the-hood prose).
+- Index: 1432 docs (1300+ works, 148 composers, prose chunks), bge-m3 embeddings.
+- Services on H20: kb_server :8100 (retrieval, container kb_server),
+  Ollama :11434 GPU3 (bge-m3 + qwen2.5:14b, keep_alive=-1 prewarmed),
+  GPT-SoVITS :9880 GPU1 (Rupert voice), LiveTalking :8010 GPU0.
+- E2E chat validated: question -> retrieve -> qwen -> Rupert voice -> avatar,
+  3.5 s to first spoken word, 25 fps. Demo: kb_chat_demo.mp4.
+- Answer grounding verified: "La Bernardina is a secular work composed by
+  Josquin des Prez" (top-1 retrieval Jos2721, correct).
