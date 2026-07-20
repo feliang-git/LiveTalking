@@ -41,3 +41,13 @@ Details & raw numbers: bench/RESULTS.md. Video artifacts: bench/runs/*.mp4 (serv
 - Diagnostic lesson: frame-diff/audio-envelope correlation metric was invalid (box on neck,
   and GT itself scores ~0.1); replaced with self-calibrating silent-audio A/B.
 - Pending: user visual review of armA vs armB vs MuseTalk.
+
+## Voice cloning (Rupert) — DONE
+- GPT-SoVITS api_v2 on H20 GPU 1 :9880 (official docker image + HF pretrained weights).
+- Zero-shot clone from a 5s lav-mic reference (auto-selected via whisper transcript).
+- Wired into LiveTalking (--tts gpt-sovits); sovits client language un-hardcoded.
+- Full-pipeline demo: intro_rupert_voice.mp4 (avatar + cloned voice), TTFA 1.69s,
+  sovits first-chunk 0.39s (streaming, faster than edgetts), 25fps held.
+- May control experiment settled the SyncTalk_2D question: same pipeline on
+  spec-compliant data works (audio-response 5.10 vs 1.29/1.80 on our short data)
+  -> awaiting 5-min Rupert re-recording for the stable-mouth track.
