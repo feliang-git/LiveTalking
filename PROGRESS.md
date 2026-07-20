@@ -64,3 +64,11 @@ Details & raw numbers: bench/RESULTS.md. Video artifacts: bench/runs/*.mp4 (serv
   3.5 s to first spoken word, 25 fps. Demo: kb_chat_demo.mp4.
 - Answer grounding verified: "La Bernardina is a secular work composed by
   Josquin des Prez" (top-1 retrieval Jos2721, correct).
+
+## Background replacement: green screen -> office — DONE
+- RobustVideoMatting (GPU) alpha matte per frame; ffmpeg chromakey rejected
+  (semi-transparent shirt + cloth-fold remnants). Office bg (empty modern
+  office, slight gaussian depth blur). New source: source_clips/rupert_office.mp4.
+- New avatar bundle: musetalk_rupert_office (green-screen original kept).
+- Serving config unchanged otherwise; demo: intro_office.mp4 (Rupert voice,
+  ttfa 1.72s, 25fps).
