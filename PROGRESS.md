@@ -72,3 +72,10 @@ Details & raw numbers: bench/RESULTS.md. Video artifacts: bench/runs/*.mp4 (serv
 - New avatar bundle: musetalk_rupert_office (green-screen original kept).
 - Serving config unchanged otherwise; demo: intro_office.mp4 (Rupert voice,
   ttfa 1.72s, 25fps).
+
+## KB expansion: 8 scholarly books ingested (2026-07-22)
+- Atlas Renaissance Music, Fallows Josquin, Kellman Ancestry, Rodin, Milsom,
+  Dean, Huizinga, Potter — ~1750 pages -> 4606 chunks. Index now 6038 docs.
+- Web app (kb_web :8300, contralabs-style) serves text Q&A with source chips;
+  digital-human panel reserved. Before/after: "Josquin's father" now answered
+  (Kellman/Fallows grounded), polyphony questions grounded in Atlas textbook.
